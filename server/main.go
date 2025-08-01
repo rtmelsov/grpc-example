@@ -1,94 +1,42 @@
 package main
 
 import (
-	"context"
 	pb "demo/proto"
+	"fmt"
 	"google.golang.org/grpc"
-	_ "google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	_ "google.golang.org/grpc/status"
 	"log"
 	"net"
-	"sort"
-	"sync"
+	"time"
 )
 
-type UsersServer struct {
-	pb.UnimplementedUsersServer
-	users sync.Map
+type MultiServer struct {
+	pb.UnimplementedStreamMultiServiceServer
 }
 
-func (s *UsersServer) AddUser(ctx context.Context, in *pb.AddUserRequest) (*pb.AddUserResponse, error) {
-	var response pb.AddUserResponse
+func (s MultiServer) MultiResponse(in *pb.Request, srv pb.StreamMultiService_MultiResponseServer) error {
+	fmt.Printf("%s Start streaming %d * [1..%d]\r\n", time.Now().Format("15:04:05"), in.Num, in.Limit)
+	for i := int64(1); i <= int64(in.Limit); i++ {
+		time.Sleep(100 * time.Millisecond)
+		resp := pb.Response{Result: int64(in.Num) * i}
 
-	if _, ok := s.users.Load(in.User.Email); ok {
-		return nil, status.Errorf(codes.Aborted, "User with email %v doesn't exists")
-	} else {
-		s.users.Store(in.User.Email, in.User)
+		if err := srv.Send(&resp); err != nil {
+			log.Fatal(err)
+		}
 	}
-	return &response, nil
+	return nil
 }
 
-func (s *UsersServer) ListUsers(ctx context.Context, in *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
-
-	var list []string
-
-	s.users.Range(func(key, _ interface{}) bool {
-		list = append(list, key.(string))
-		return true
-	})
-
-	sort.Strings(list)
-
-	offset := int(in.Offset)
-	end := int(in.Offset + in.Limit)
-	if end > len(list) {
-		end = len(list)
-	}
-
-	if offset >= end {
-		offset = 0
-		end = 0
-	}
-
-	response := pb.ListUsersResponse{
-		Count:  int32(len(list)),
-		Emails: list[offset:end],
-	}
-
-	return &response, nil
-}
-
-func (s *UsersServer) GetUser(ctx context.Context, in *pb.GetUserRequest) (*pb.GetUserResponse, error) {
-	var response pb.GetUserResponse
-
-	if user, ok := s.users.Load(in.Email); ok {
-		response.User = user.(*pb.User)
-	} else {
-		return nil, status.Errorf(codes.NotFound, "User with email %v doesn't exists")
-	}
-	return &response, nil
-}
-func (s *UsersServer) DelUser(ctx context.Context, in *pb.DelUserRequest) (*pb.DelUserResponse, error) {
-	var response pb.DelUserResponse
-
-	if _, ok := s.users.LoadAndDelete(in.Email); !ok {
-		return nil, status.Errorf(codes.NotFound, "User with email %v doesn't exists")
-	}
-	return &response, nil
-}
 func main() {
-
 	listen, err := net.Listen("tcp", ":3200")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterUsersServer(s, &UsersServer{})
+	pb.RegisterStreamMultiServiceServer(s, MultiServer{})
 
-	if err = s.Serve(listen); err != nil {
+	fmt.Println("Start gRPC server")
+	if err := s.Serve(listen); err != nil {
 		log.Fatal(err)
 	}
 }

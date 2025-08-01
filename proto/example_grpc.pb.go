@@ -19,217 +19,106 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Users_AddUser_FullMethodName   = "/demo.Users/AddUser"
-	Users_ListUsers_FullMethodName = "/demo.Users/ListUsers"
-	Users_GetUser_FullMethodName   = "/demo.Users/GetUser"
-	Users_DelUser_FullMethodName   = "/demo.Users/DelUser"
+	StreamMultiService_MultiResponse_FullMethodName = "/demo.StreamMultiService/MultiResponse"
 )
 
-// UsersClient is the client API for Users service.
+// StreamMultiServiceClient is the client API for StreamMultiService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type UsersClient interface {
-	AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*AddUserResponse, error)
-	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
-	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
-	DelUser(ctx context.Context, in *DelUserRequest, opts ...grpc.CallOption) (*DelUserResponse, error)
+type StreamMultiServiceClient interface {
+	MultiResponse(ctx context.Context, in *Request, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Response], error)
 }
 
-type usersClient struct {
+type streamMultiServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewUsersClient(cc grpc.ClientConnInterface) UsersClient {
-	return &usersClient{cc}
+func NewStreamMultiServiceClient(cc grpc.ClientConnInterface) StreamMultiServiceClient {
+	return &streamMultiServiceClient{cc}
 }
 
-func (c *usersClient) AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*AddUserResponse, error) {
+func (c *streamMultiServiceClient) MultiResponse(ctx context.Context, in *Request, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Response], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AddUserResponse)
-	err := c.cc.Invoke(ctx, Users_AddUser_FullMethodName, in, out, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &StreamMultiService_ServiceDesc.Streams[0], StreamMultiService_MultiResponse_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
-}
-
-func (c *usersClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListUsersResponse)
-	err := c.cc.Invoke(ctx, Users_ListUsers_FullMethodName, in, out, cOpts...)
-	if err != nil {
+	x := &grpc.GenericClientStream[Request, Response]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
-	return out, nil
-}
-
-func (c *usersClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetUserResponse)
-	err := c.cc.Invoke(ctx, Users_GetUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
+	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return x, nil
 }
 
-func (c *usersClient) DelUser(ctx context.Context, in *DelUserRequest, opts ...grpc.CallOption) (*DelUserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DelUserResponse)
-	err := c.cc.Invoke(ctx, Users_DelUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type StreamMultiService_MultiResponseClient = grpc.ServerStreamingClient[Response]
 
-// UsersServer is the server API for Users service.
-// All implementations must embed UnimplementedUsersServer
+// StreamMultiServiceServer is the server API for StreamMultiService service.
+// All implementations must embed UnimplementedStreamMultiServiceServer
 // for forward compatibility.
-type UsersServer interface {
-	AddUser(context.Context, *AddUserRequest) (*AddUserResponse, error)
-	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
-	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
-	DelUser(context.Context, *DelUserRequest) (*DelUserResponse, error)
-	mustEmbedUnimplementedUsersServer()
+type StreamMultiServiceServer interface {
+	MultiResponse(*Request, grpc.ServerStreamingServer[Response]) error
+	mustEmbedUnimplementedStreamMultiServiceServer()
 }
 
-// UnimplementedUsersServer must be embedded to have
+// UnimplementedStreamMultiServiceServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedUsersServer struct{}
+type UnimplementedStreamMultiServiceServer struct{}
 
-func (UnimplementedUsersServer) AddUser(context.Context, *AddUserRequest) (*AddUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddUser not implemented")
+func (UnimplementedStreamMultiServiceServer) MultiResponse(*Request, grpc.ServerStreamingServer[Response]) error {
+	return status.Errorf(codes.Unimplemented, "method MultiResponse not implemented")
 }
-func (UnimplementedUsersServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListUsers not implemented")
-}
-func (UnimplementedUsersServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
-}
-func (UnimplementedUsersServer) DelUser(context.Context, *DelUserRequest) (*DelUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DelUser not implemented")
-}
-func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
-func (UnimplementedUsersServer) testEmbeddedByValue()               {}
+func (UnimplementedStreamMultiServiceServer) mustEmbedUnimplementedStreamMultiServiceServer() {}
+func (UnimplementedStreamMultiServiceServer) testEmbeddedByValue()                            {}
 
-// UnsafeUsersServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to UsersServer will
+// UnsafeStreamMultiServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to StreamMultiServiceServer will
 // result in compilation errors.
-type UnsafeUsersServer interface {
-	mustEmbedUnimplementedUsersServer()
+type UnsafeStreamMultiServiceServer interface {
+	mustEmbedUnimplementedStreamMultiServiceServer()
 }
 
-func RegisterUsersServer(s grpc.ServiceRegistrar, srv UsersServer) {
-	// If the following call pancis, it indicates UnimplementedUsersServer was
+func RegisterStreamMultiServiceServer(s grpc.ServiceRegistrar, srv StreamMultiServiceServer) {
+	// If the following call pancis, it indicates UnimplementedStreamMultiServiceServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&Users_ServiceDesc, srv)
+	s.RegisterService(&StreamMultiService_ServiceDesc, srv)
 }
 
-func _Users_AddUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _StreamMultiService_MultiResponse_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Request)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(UsersServer).AddUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Users_AddUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).AddUser(ctx, req.(*AddUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(StreamMultiServiceServer).MultiResponse(m, &grpc.GenericServerStream[Request, Response]{ServerStream: stream})
 }
 
-func _Users_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListUsersRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).ListUsers(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Users_ListUsers_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).ListUsers(ctx, req.(*ListUsersRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type StreamMultiService_MultiResponseServer = grpc.ServerStreamingServer[Response]
 
-func _Users_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).GetUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Users_GetUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).GetUser(ctx, req.(*GetUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Users_DelUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DelUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).DelUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Users_DelUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).DelUser(ctx, req.(*DelUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// Users_ServiceDesc is the grpc.ServiceDesc for Users service.
+// StreamMultiService_ServiceDesc is the grpc.ServiceDesc for StreamMultiService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Users_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "demo.Users",
-	HandlerType: (*UsersServer)(nil),
-	Methods: []grpc.MethodDesc{
+var StreamMultiService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "demo.StreamMultiService",
+	HandlerType: (*StreamMultiServiceServer)(nil),
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "AddUser",
-			Handler:    _Users_AddUser_Handler,
-		},
-		{
-			MethodName: "ListUsers",
-			Handler:    _Users_ListUsers_Handler,
-		},
-		{
-			MethodName: "GetUser",
-			Handler:    _Users_GetUser_Handler,
-		},
-		{
-			MethodName: "DelUser",
-			Handler:    _Users_DelUser_Handler,
+			StreamName:    "MultiResponse",
+			Handler:       _StreamMultiService_MultiResponse_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/example.proto",
 }
