@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	pb "demo/proto"
+	"fmt"
 	"google.golang.org/grpc"
-	_ "google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	_ "google.golang.org/grpc/status"
 	"log"
 	"net"
 	"sort"
@@ -21,9 +21,17 @@ type UsersServer struct {
 
 func (s *UsersServer) AddUser(ctx context.Context, in *pb.AddUserRequest) (*pb.AddUserResponse, error) {
 	var response pb.AddUserResponse
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		values := md.Get("token")
+		if len(values) > 0 {
+			token := values[0]
+			fmt.Println("token", token)
+		}
+	}
 
 	if _, ok := s.users.Load(in.User.Email); ok {
-		return nil, status.Errorf(codes.Aborted, "User with email %v doesn't exists")
+		return nil, status.Errorf(codes.Aborted, "User with email %v doesn't exists", in.User.Email)
 	} else {
 		s.users.Store(in.User.Email, in.User)
 	}
@@ -34,7 +42,7 @@ func (s *UsersServer) ListUsers(ctx context.Context, in *pb.ListUsersRequest) (*
 
 	var list []string
 
-	s.users.Range(func(key, _ interface{}) bool {
+	s.users.Range(func(key, _ any) bool {
 		list = append(list, key.(string))
 		return true
 	})
@@ -66,7 +74,7 @@ func (s *UsersServer) GetUser(ctx context.Context, in *pb.GetUserRequest) (*pb.G
 	if user, ok := s.users.Load(in.Email); ok {
 		response.User = user.(*pb.User)
 	} else {
-		return nil, status.Errorf(codes.NotFound, "User with email %v doesn't exists")
+		return nil, status.Errorf(codes.NotFound, "User with email %v doesn't exists", in.Email)
 	}
 	return &response, nil
 }
@@ -74,7 +82,7 @@ func (s *UsersServer) DelUser(ctx context.Context, in *pb.DelUserRequest) (*pb.D
 	var response pb.DelUserResponse
 
 	if _, ok := s.users.LoadAndDelete(in.Email); !ok {
-		return nil, status.Errorf(codes.NotFound, "User with email %v doesn't exists")
+		return nil, status.Errorf(codes.NotFound, "User with email %v doesn't exists", in.Email)
 	}
 	return &response, nil
 }

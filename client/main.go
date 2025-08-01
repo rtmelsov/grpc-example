@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"log"
-
-	_ "google.golang.org/grpc"
-	_ "google.golang.org/grpc/credentials/insecure"
 )
 
 func TestUsers(c pb.UsersClient) {
@@ -24,7 +22,9 @@ func TestUsers(c pb.UsersClient) {
 	}
 
 	for _, user := range users {
-		resp, err := c.AddUser(context.Background(), &pb.AddUserRequest{
+		md := metadata.New(map[string]string{"token": "12345"})
+		ctx := metadata.NewOutgoingContext(context.Background(), md)
+		resp, err := c.AddUser(ctx, &pb.AddUserRequest{
 			User: user,
 		})
 		if err != nil {
