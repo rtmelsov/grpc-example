@@ -12,6 +12,7 @@ import (
 	"net"
 	"sort"
 	"sync"
+	"time"
 )
 
 type UsersServer struct {
@@ -68,6 +69,21 @@ func (s *UsersServer) ListUsers(ctx context.Context, in *pb.ListUsersRequest) (*
 	return &response, nil
 }
 
+func ServerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	start := time.Now()
+	fmt.Println("Incoming request...")
+	resp, err := handler(ctx, req)
+
+	fmt.Println("Finished!", info.FullMethod, "Duration", time.Since(start))
+
+	if err != nil {
+		st, _ := status.FromError(err)
+		fmt.Println("Error: ", st.Message())
+	}
+
+	return resp, nil
+}
+
 func (s *UsersServer) GetUser(ctx context.Context, in *pb.GetUserRequest) (*pb.GetUserResponse, error) {
 	var response pb.GetUserResponse
 
@@ -87,13 +103,15 @@ func (s *UsersServer) DelUser(ctx context.Context, in *pb.DelUserRequest) (*pb.D
 	return &response, nil
 }
 func main() {
-
 	listen, err := net.Listen("tcp", ":3200")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	s := grpc.NewServer()
+	// middlewares for grpc = interceptors
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(ServerInterceptor),
+	)
 	pb.RegisterUsersServer(s, &UsersServer{})
 
 	if err = s.Serve(listen); err != nil {
